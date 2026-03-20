@@ -1,0 +1,12 @@
+{
+  "name": "novapanel-api",
+  "version": "0.1.0",
+  "description": "NovaPanel REST API",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

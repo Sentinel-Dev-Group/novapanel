@@ -1,0 +1,12 @@
+{
+  "name": "novapanel-daemon",
+  "version": "0.1.0",
+  "description": "NovaPanel Node Daemon",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
