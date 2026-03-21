@@ -18,8 +18,8 @@ router.get("/ping", (req, res) => {
 
 // ── Feature routes (uncomment as we build them) ───────────────
  router.use("/auth",    require("./auth.routes"));
-// router.use("/servers", require("./servers.routes"));
-// router.use("/nodes",   require("./nodes.routes"));
+ router.use("/servers", require("./servers.routes"));
+ router.use("/nodes",   require("./nodes.routes"));
 // router.use("/admin",   require("./admin.routes"));
 
 module.exports = router;
