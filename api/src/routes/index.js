@@ -20,6 +20,6 @@ router.get("/ping", (req, res) => {
  router.use("/auth",    require("./auth.routes"));
  router.use("/servers", require("./servers.routes"));
  router.use("/nodes",   require("./nodes.routes"));
-// router.use("/admin",   require("./admin.routes"));
+ router.use("/admin",   require("./admin.routes"));
 
 module.exports = router;
