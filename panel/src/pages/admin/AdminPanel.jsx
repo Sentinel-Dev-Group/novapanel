@@ -1,34 +1,39 @@
-// ============================================================
-//  AdminPanel.jsx — Admin management page
-// ============================================================
-
 import { useEffect, useState } from "react";
 import {
   Users, Server, Globe, Shield,
-  Search, Loader2, AlertCircle,
-  CheckCircle, XCircle, MoreVertical,
-  Plus, Activity, HardDrive, Cpu,
+  Search, Loader2, CheckCircle,
+  XCircle, Plus, Activity,
+  HardDrive, Cpu, ChevronRight,
 } from "lucide-react";
 import Layout   from "../../components/layout/Layout";
 import api      from "../../lib/api";
 
 // ── Stat card ─────────────────────────────────────────────────
-function StatCard({ icon: Icon, label, value, color = "indigo" }) {
-  const colors = {
-    indigo: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
-    green:  "bg-green-500/10  text-green-400  border-green-500/20",
-    yellow: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
-    red:    "bg-red-500/10    text-red-400    border-red-500/20",
+function StatCard({ icon: Icon, label, value, accent = "indigo" }) {
+  const accents = {
+    indigo: { bg: "rgba(99,102,241,0.08)",  border: "rgba(99,102,241,0.2)",  color: "#6366f1"  },
+    green:  { bg: "rgba(34,197,94,0.08)",   border: "rgba(34,197,94,0.2)",   color: "#22c55e"  },
+    yellow: { bg: "rgba(234,179,8,0.08)",   border: "rgba(234,179,8,0.2)",   color: "#eab308"  },
+    red:    { bg: "rgba(239,68,68,0.08)",   border: "rgba(239,68,68,0.2)",   color: "#ef4444"  },
   };
-
+  const a = accents[accent];
   return (
-    <div className="bg-[#161b27] border border-[#1e2535] rounded-xl p-5 flex items-center gap-4">
-      <div className={`w-10 h-10 rounded-lg border flex items-center justify-center shrink-0 ${colors[color]}`}>
-        <Icon className="w-5 h-5" />
+    <div style={{
+      background: "var(--bg-surface)", border: "1px solid var(--border)",
+      borderRadius: "12px", padding: "20px",
+      display: "flex", alignItems: "center", gap: "14px",
+    }}>
+      <div style={{
+        width: "40px", height: "40px", borderRadius: "10px",
+        background: a.bg, border: `1px solid ${a.border}`,
+        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        boxShadow: `0 0 16px ${a.bg}`,
+      }}>
+        <Icon size={18} color={a.color} />
       </div>
       <div>
-        <p className="text-xs text-slate-500">{label}</p>
-        <p className="text-2xl font-bold text-white">{value}</p>
+        <p style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "4px" }}>{label}</p>
+        <p style={{ fontSize: "22px", fontWeight: 700, color: "var(--text-primary)", lineHeight: 1 }}>{value}</p>
       </div>
     </div>
   );
@@ -36,47 +41,128 @@ function StatCard({ icon: Icon, label, value, color = "indigo" }) {
 
 // ── Role badge ────────────────────────────────────────────────
 function RoleBadge({ role }) {
-  const styles = {
-    root:  "bg-red-500/10    text-red-400    border-red-500/20",
-    admin: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
-    user:  "bg-slate-500/10  text-slate-400  border-slate-500/20",
+  const map = {
+    root:  { bg: "rgba(239,68,68,0.1)",   color: "#ef4444", border: "rgba(239,68,68,0.25)"   },
+    admin: { bg: "rgba(99,102,241,0.1)",  color: "#6366f1", border: "rgba(99,102,241,0.25)"  },
+    user:  { bg: "rgba(100,116,139,0.1)", color: "#64748b", border: "rgba(100,116,139,0.25)" },
   };
-
+  const s = map[role] || map.user;
   return (
-    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border capitalize ${styles[role] || styles.user}`}>
-      {role}
+    <span style={{
+      fontSize: "11px", fontWeight: 600,
+      padding: "2px 8px", borderRadius: "20px",
+      background: s.bg, color: s.color,
+      border: `1px solid ${s.border}`,
+      textTransform: "capitalize",
+    }}>{role}</span>
+  );
+}
+
+// ── Status badge ──────────────────────────────────────────────
+function StatusBadge({ status }) {
+  const map = {
+    running:    { bg: "rgba(34,197,94,0.1)",   color: "#22c55e", border: "rgba(34,197,94,0.25)"   },
+    stopped:    { bg: "rgba(100,116,139,0.1)",  color: "#64748b", border: "rgba(100,116,139,0.25)" },
+    starting:   { bg: "rgba(234,179,8,0.1)",   color: "#eab308", border: "rgba(234,179,8,0.25)"   },
+    installing: { bg: "rgba(59,130,246,0.1)",  color: "#3b82f6", border: "rgba(59,130,246,0.25)"  },
+    error:      { bg: "rgba(239,68,68,0.1)",   color: "#ef4444", border: "rgba(239,68,68,0.25)"   },
+  };
+  const s = map[status] || map.stopped;
+  return (
+    <span style={{
+      fontSize: "11px", fontWeight: 600,
+      padding: "2px 8px", borderRadius: "20px",
+      background: s.bg, color: s.color,
+      border: `1px solid ${s.border}`,
+      textTransform: "capitalize",
+    }}>{status}</span>
+  );
+}
+
+// ── Node status ───────────────────────────────────────────────
+function NodeStatus({ status }) {
+  const map = {
+    online:   { color: "#22c55e", dot: "#22c55e" },
+    offline:  { color: "#64748b", dot: "#64748b" },
+    draining: { color: "#eab308", dot: "#eab308" },
+  };
+  const s = map[status] || map.offline;
+  return (
+    <span style={{ display: "flex", alignItems: "center", gap: "5px", fontSize: "12px", color: s.color }}>
+      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: s.dot, flexShrink: 0 }} />
+      {status}
     </span>
   );
 }
 
-// ── Status dot ────────────────────────────────────────────────
-function StatusDot({ active, suspended }) {
-  if (suspended) return (
-    <span className="flex items-center gap-1 text-xs text-red-400">
-      <XCircle className="w-3.5 h-3.5" /> Suspended
-    </span>
-  );
-  if (active) return (
-    <span className="flex items-center gap-1 text-xs text-green-400">
-      <CheckCircle className="w-3.5 h-3.5" /> Active
-    </span>
-  );
+// ── Tab ───────────────────────────────────────────────────────
+function Tab({ id, active, icon: Icon, label, count, onClick }) {
   return (
-    <span className="flex items-center gap-1 text-xs text-slate-500">
-      <XCircle className="w-3.5 h-3.5" /> Inactive
-    </span>
+    <button
+      onClick={() => onClick(id)}
+      style={{
+        display: "flex", alignItems: "center", gap: "6px",
+        padding: "8px 16px", borderRadius: "8px", border: "none",
+        background: active ? "var(--indigo)" : "transparent",
+        color: active ? "white" : "var(--text-muted)",
+        fontSize: "13px", fontWeight: 500, cursor: "pointer",
+        transition: "all 0.15s",
+        boxShadow: active ? "0 0 16px rgba(99,102,241,0.3)" : "none",
+      }}
+    >
+      <Icon size={14} />
+      {label}
+      {count !== undefined && (
+        <span style={{
+          fontSize: "10px", fontWeight: 700,
+          background: active ? "rgba(255,255,255,0.2)" : "var(--bg-elevated)",
+          color: active ? "white" : "var(--text-muted)",
+          padding: "1px 6px", borderRadius: "10px",
+        }}>{count}</span>
+      )}
+    </button>
   );
 }
 
-// ── Tabs ──────────────────────────────────────────────────────
-const TABS = [
-  { id: "overview", label: "Overview",  icon: Activity },
-  { id: "users",    label: "Users",     icon: Users    },
-  { id: "servers",  label: "Servers",   icon: Server   },
-  { id: "nodes",    label: "Nodes",     icon: Globe    },
-];
+// ── Search input ──────────────────────────────────────────────
+function SearchInput({ value, onChange, placeholder }) {
+  return (
+    <div style={{ position: "relative", flex: 1, maxWidth: "320px" }}>
+      <Search size={13} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+      <input
+        type="text" value={value} onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{
+          width: "100%", boxSizing: "border-box",
+          background: "var(--bg-surface)", border: "1px solid var(--border)",
+          borderRadius: "8px", padding: "9px 12px 9px 32px",
+          fontSize: "13px", color: "var(--text-primary)", outline: "none",
+          transition: "border 0.15s",
+        }}
+        onFocus={(e) => e.target.style.borderColor = "var(--indigo)"}
+        onBlur={(e)  => e.target.style.borderColor = "var(--border)"}
+      />
+    </div>
+  );
+}
 
-// ── Main component ────────────────────────────────────────────
+// ── Table header ──────────────────────────────────────────────
+function THead({ cols }) {
+  return (
+    <div style={{
+      display: "grid", gridTemplateColumns: cols,
+      padding: "10px 20px",
+      borderBottom: "1px solid var(--border)",
+      fontSize: "11px", fontWeight: 600,
+      color: "var(--text-muted)", textTransform: "uppercase",
+      letterSpacing: "0.05em",
+    }}>
+      {/* rendered by parent */}
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────
 export default function AdminPanel() {
   const [tab,     setTab]     = useState("overview");
   const [users,   setUsers]   = useState([]);
@@ -85,9 +171,7 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [search,  setSearch]  = useState("");
 
-  useEffect(() => {
-    loadAll();
-  }, []);
+  useEffect(() => { loadAll(); }, []);
 
   async function loadAll() {
     setLoading(true);
@@ -107,336 +191,286 @@ export default function AdminPanel() {
     }
   }
 
-  // ── Derived stats ──────────────────────────────────────────
-  const runningServers  = servers.filter((s) => s.status === "running").length;
-  const suspendedUsers  = users.filter((u) => u.isSuspended).length;
-  const onlineNodes     = nodes.filter((n) => n.status === "online").length;
+  const runningServers = servers.filter((s) => s.status === "running").length;
+  const onlineNodes    = nodes.filter((n) => n.status === "online").length;
+  const suspendedUsers = users.filter((u) => u.isSuspended).length;
 
-  // ── Search filter ──────────────────────────────────────────
-  const filteredUsers = users.filter((u) =>
+  const filteredUsers   = users.filter((u) =>
     u.username.toLowerCase().includes(search.toLowerCase()) ||
     u.email.toLowerCase().includes(search.toLowerCase())
   );
-
   const filteredServers = servers.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.gameType.toLowerCase().includes(search.toLowerCase())
+    s.gameType?.toLowerCase().includes(search.toLowerCase())
   );
-
-  const filteredNodes = nodes.filter((n) =>
+  const filteredNodes   = nodes.filter((n) =>
     n.name.toLowerCase().includes(search.toLowerCase()) ||
-    n.location.toLowerCase().includes(search.toLowerCase())
+    n.location?.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
     <Layout title="Admin">
-      <div className="flex items-center justify-between mb-6">
+
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "24px" }}>
+        <div style={{
+          width: "36px", height: "36px", borderRadius: "9px",
+          background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <Shield size={16} color="var(--indigo)" />
+        </div>
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Shield className="w-5 h-5 text-indigo-400" />
-            Admin Panel
-          </h2>
-          <p className="text-sm text-slate-400 mt-0.5">
-            Manage users, servers and nodes
-          </p>
+          <h2 style={{ fontSize: "20px", fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.2 }}>Admin Panel</h2>
+          <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>Manage users, servers and nodes</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-[#161b27] border border-[#1e2535] rounded-xl p-1 w-fit">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => { setTab(t.id); setSearch(""); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
-              tab === t.id
-                ? "bg-indigo-600 text-white"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <t.icon className="w-4 h-4" />
-            {t.label}
-          </button>
-        ))}
+      <div style={{
+        display: "flex", gap: "4px",
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border)",
+        borderRadius: "10px", padding: "4px",
+        width: "fit-content", marginBottom: "20px",
+      }}>
+        <Tab id="overview" active={tab==="overview"} icon={Activity} label="Overview"  onClick={(id) => { setTab(id); setSearch(""); }} />
+        <Tab id="users"    active={tab==="users"}    icon={Users}    label="Users"     count={users.length}   onClick={(id) => { setTab(id); setSearch(""); }} />
+        <Tab id="servers"  active={tab==="servers"}  icon={Server}   label="Servers"   count={servers.length} onClick={(id) => { setTab(id); setSearch(""); }} />
+        <Tab id="nodes"    active={tab==="nodes"}    icon={Globe}    label="Nodes"     count={nodes.length}   onClick={(id) => { setTab(id); setSearch(""); }} />
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-slate-500">
-          <Loader2 className="w-6 h-6 animate-spin mr-2" />
-          Loading...
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px", color: "var(--text-muted)", gap: "8px" }}>
+          <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
+          <span style={{ fontSize: "13px" }}>Loading...</span>
         </div>
       ) : (
         <>
-          {/* ── Overview tab ───────────────────────────────── */}
+          {/* ── Overview ─────────────────────────────────── */}
           {tab === "overview" && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon={Users}  label="Total Users"       value={users.length}   color="indigo" />
-                <StatCard icon={Server} label="Total Servers"     value={servers.length} color="green"  />
-                <StatCard icon={Globe}  label="Online Nodes"      value={`${onlineNodes}/${nodes.length}`} color="yellow" />
-                <StatCard icon={Shield} label="Suspended Users"   value={suspendedUsers} color={suspendedUsers > 0 ? "red" : "indigo"} />
+            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "14px" }}>
+                <StatCard icon={Users}  label="Total Users"     value={users.length}   accent="indigo" />
+                <StatCard icon={Server} label="Total Servers"   value={servers.length} accent="green"  />
+                <StatCard icon={Globe}  label="Online Nodes"    value={`${onlineNodes}/${nodes.length}`} accent="yellow" />
+                <StatCard icon={Shield} label="Suspended Users" value={suspendedUsers} accent={suspendedUsers > 0 ? "red" : "indigo"} />
               </div>
 
               {/* Recent users */}
-              <div className="bg-[#161b27] border border-[#1e2535] rounded-xl">
-                <div className="px-5 py-4 border-b border-[#1e2535] flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white">Recent Users</h3>
-                  <button
-                    onClick={() => setTab("users")}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 transition"
-                  >
+              <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>Recent Users</span>
+                  <button onClick={() => setTab("users")} style={{ background: "none", border: "none", color: "var(--indigo-light)", fontSize: "12px", cursor: "pointer" }}>
                     View all →
                   </button>
                 </div>
-                <div className="divide-y divide-[#1e2535]">
-                  {users.slice(0, 5).map((user) => (
-                    <div key={user.uuid} className="flex items-center justify-between px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/20 flex items-center justify-center">
-                          <span className="text-xs font-bold text-indigo-400 uppercase">
-                            {user.username[0]}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-white">{user.username}</p>
-                          <p className="text-xs text-slate-500">{user.email}</p>
-                        </div>
+                {users.slice(0, 5).map((user, i) => (
+                  <div key={user.uuid} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "12px 20px",
+                    borderBottom: i < Math.min(users.length, 5) - 1 ? "1px solid var(--border)" : "none",
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{
+                        width: "32px", height: "32px", borderRadius: "50%",
+                        background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "12px", fontWeight: 700, color: "white", flexShrink: 0,
+                      }}>
+                        {user.username[0].toUpperCase()}
                       </div>
-                      <div className="flex items-center gap-3">
-                        <RoleBadge role={user.role} />
-                        <StatusDot active={user.isActive} suspended={user.isSuspended} />
+                      <div>
+                        <p style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)", marginBottom: "1px" }}>{user.username}</p>
+                        <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>{user.email}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <RoleBadge role={user.role} />
+                      {user.isSuspended
+                        ? <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#ef4444" }}><XCircle size={12} /> Suspended</span>
+                        : <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#22c55e" }}><CheckCircle size={12} /> Active</span>
+                      }
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {/* Recent servers */}
-              <div className="bg-[#161b27] border border-[#1e2535] rounded-xl">
-                <div className="px-5 py-4 border-b border-[#1e2535] flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-white">Recent Servers</h3>
-                  <button
-                    onClick={() => setTab("servers")}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 transition"
-                  >
+              <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+                  <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)" }}>Recent Servers</span>
+                  <button onClick={() => setTab("servers")} style={{ background: "none", border: "none", color: "var(--indigo-light)", fontSize: "12px", cursor: "pointer" }}>
                     View all →
                   </button>
                 </div>
-                <div className="divide-y divide-[#1e2535]">
-                  {servers.slice(0, 5).map((server) => (
-                    <div key={server.uuid} className="flex items-center justify-between px-5 py-3">
-                      <div>
-                        <p className="text-sm font-medium text-white">{server.name}</p>
-                        <p className="text-xs text-slate-500">
-                          {server.gameType} · {server.node?.name}
-                        </p>
-                      </div>
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full border capitalize ${
-                        server.status === "running"
-                          ? "bg-green-500/10 text-green-400 border-green-500/20"
-                          : "bg-slate-500/10 text-slate-400 border-slate-500/20"
-                      }`}>
-                        {server.status}
-                      </span>
+                {servers.slice(0, 5).map((server, i) => (
+                  <div key={server.uuid} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "12px 20px",
+                    borderBottom: i < Math.min(servers.length, 5) - 1 ? "1px solid var(--border)" : "none",
+                  }}>
+                    <div>
+                      <p style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)", marginBottom: "1px" }}>{server.name}</p>
+                      <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>{server.gameType?.replace(/_/g," ")} · {server.node?.name}</p>
                     </div>
-                  ))}
-                </div>
+                    <StatusBadge status={server.status} />
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* ── Users tab ──────────────────────────────────── */}
+          {/* ── Users ────────────────────────────────────── */}
           {tab === "users" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input
-                    type="text"
-                    placeholder="Search users..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-[#161b27] border border-[#1e2535] rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition"
-                  />
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <SearchInput value={search} onChange={setSearch} placeholder="Search users..." />
+              <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden" }}>
+                {/* Header */}
+                <div style={{
+                  display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr",
+                  padding: "10px 20px", borderBottom: "1px solid var(--border)",
+                  fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em",
+                }}>
+                  <span>User</span><span>Role</span><span>Status</span><span>Joined</span><span>Last Login</span>
                 </div>
-              </div>
-
-              <div className="bg-[#161b27] border border-[#1e2535] rounded-xl overflow-hidden">
-                {/* Table header */}
-                <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-[#1e2535] text-xs font-medium text-slate-500 uppercase tracking-wide">
-                  <div className="col-span-4">User</div>
-                  <div className="col-span-2">Role</div>
-                  <div className="col-span-2">Status</div>
-                  <div className="col-span-2">Joined</div>
-                  <div className="col-span-2">Last login</div>
-                </div>
-
-                {/* Rows */}
-                <div className="divide-y divide-[#1e2535]">
-                  {filteredUsers.map((user) => (
-                    <div key={user.uuid} className="grid grid-cols-12 gap-4 px-5 py-3.5 hover:bg-[#1a2035] transition items-center">
-                      <div className="col-span-4 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/20 flex items-center justify-center shrink-0">
-                          <span className="text-xs font-bold text-indigo-400 uppercase">
-                            {user.username[0]}
-                          </span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-white truncate">{user.username}</p>
-                          <p className="text-xs text-slate-500 truncate">{user.email}</p>
-                        </div>
+                {filteredUsers.map((user, i) => (
+                  <div key={user.uuid} style={{
+                    display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr",
+                    padding: "12px 20px", alignItems: "center",
+                    borderBottom: i < filteredUsers.length - 1 ? "1px solid var(--border)" : "none",
+                    transition: "background 0.15s",
+                  }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <div style={{
+                        width: "30px", height: "30px", borderRadius: "50%",
+                        background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "11px", fontWeight: 700, color: "white", flexShrink: 0,
+                      }}>
+                        {user.username[0].toUpperCase()}
                       </div>
-                      <div className="col-span-2">
-                        <RoleBadge role={user.role} />
-                      </div>
-                      <div className="col-span-2">
-                        <StatusDot active={user.isActive} suspended={user.isSuspended} />
-                      </div>
-                      <div className="col-span-2 text-xs text-slate-500">
-                        {new Date(user.createdAt).toLocaleDateString()}
-                      </div>
-                      <div className="col-span-2 text-xs text-slate-500">
-                        {user.lastLoginAt
-                          ? new Date(user.lastLoginAt).toLocaleDateString()
-                          : "Never"
-                        }
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.username}</p>
+                        <p style={{ fontSize: "11px", color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user.email}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <div><RoleBadge role={user.role} /></div>
+                    <div>
+                      {user.isSuspended
+                        ? <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#ef4444" }}><XCircle size={11} />Suspended</span>
+                        : <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#22c55e" }}><CheckCircle size={11} />Active</span>
+                      }
+                    </div>
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{new Date(user.createdAt).toLocaleDateString()}</span>
+                    <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleDateString() : "Never"}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* ── Servers tab ────────────────────────────────── */}
+          {/* ── Servers ──────────────────────────────────── */}
           {tab === "servers" && (
-            <div className="space-y-4">
-              <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder="Search servers..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-[#161b27] border border-[#1e2535] rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition"
-                />
-              </div>
-
-              <div className="bg-[#161b27] border border-[#1e2535] rounded-xl overflow-hidden">
-                <div className="grid grid-cols-12 gap-4 px-5 py-3 border-b border-[#1e2535] text-xs font-medium text-slate-500 uppercase tracking-wide">
-                  <div className="col-span-4">Server</div>
-                  <div className="col-span-2">Owner</div>
-                  <div className="col-span-2">Node</div>
-                  <div className="col-span-2">Resources</div>
-                  <div className="col-span-2">Status</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <SearchInput value={search} onChange={setSearch} placeholder="Search servers..." />
+              <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "12px", overflow: "hidden" }}>
+                <div style={{
+                  display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr",
+                  padding: "10px 20px", borderBottom: "1px solid var(--border)",
+                  fontSize: "11px", fontWeight: 600, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em",
+                }}>
+                  <span>Server</span><span>Owner</span><span>Node</span><span>Resources</span><span>Status</span>
                 </div>
-
-                <div className="divide-y divide-[#1e2535]">
-                  {filteredServers.map((server) => (
-                    <div key={server.uuid} className="grid grid-cols-12 gap-4 px-5 py-3.5 hover:bg-[#1a2035] transition items-center">
-                      <div className="col-span-4">
-                        <p className="text-sm font-medium text-white">{server.name}</p>
-                        <p className="text-xs text-slate-500 capitalize">
-                          {server.gameType?.replace(/_/g, " ")} · #{server.shortId}
-                        </p>
-                      </div>
-                      <div className="col-span-2 text-xs text-slate-400">
-                        {server.owner?.username || "—"}
-                      </div>
-                      <div className="col-span-2 text-xs text-slate-400">
-                        {server.node?.name || "—"}
-                      </div>
-                      <div className="col-span-2 text-xs text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <Cpu className="w-3 h-3" />{server.cpuLimit}%
-                        </span>
-                        <span className="flex items-center gap-1 mt-0.5">
-                          <HardDrive className="w-3 h-3" />{server.memoryLimit}MB
-                        </span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border capitalize ${
-                          server.status === "running"
-                            ? "bg-green-500/10 text-green-400 border-green-500/20"
-                            : server.status === "installing"
-                            ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                            : server.status === "starting"
-                            ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                            : "bg-slate-500/10 text-slate-400 border-slate-500/20"
-                        }`}>
-                          {server.status}
-                        </span>
-                      </div>
+                {filteredServers.map((server, i) => (
+                  <div key={server.uuid} style={{
+                    display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr",
+                    padding: "12px 20px", alignItems: "center",
+                    borderBottom: i < filteredServers.length - 1 ? "1px solid var(--border)" : "none",
+                    transition: "background 0.15s",
+                  }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                  >
+                    <div>
+                      <p style={{ fontSize: "13px", fontWeight: 500, color: "var(--text-primary)", marginBottom: "1px" }}>{server.name}</p>
+                      <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>{server.gameType?.replace(/_/g," ")} · #{server.shortId}</p>
                     </div>
-                  ))}
-                </div>
+                    <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{server.owner?.username || "—"}</span>
+                    <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>{server.node?.name || "—"}</span>
+                    <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "3px", marginBottom: "2px" }}><Cpu size={10} />{server.cpuLimit}%</div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "3px" }}><HardDrive size={10} />{server.memoryLimit}MB</div>
+                    </div>
+                    <StatusBadge status={server.status} />
+                  </div>
+                ))}
               </div>
             </div>
           )}
 
-          {/* ── Nodes tab ──────────────────────────────────── */}
+          {/* ── Nodes ────────────────────────────────────── */}
           {tab === "nodes" && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="relative max-w-sm flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input
-                    type="text"
-                    placeholder="Search nodes..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full bg-[#161b27] border border-[#1e2535] rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 transition"
-                  />
-                </div>
-                <button className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition ml-3">
-                  <Plus className="w-4 h-4" />
-                  Add Node
+            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <SearchInput value={search} onChange={setSearch} placeholder="Search nodes..." />
+                <button style={{
+                  display: "flex", alignItems: "center", gap: "6px",
+                  background: "var(--indigo)", border: "none", borderRadius: "8px",
+                  padding: "9px 16px", color: "white", fontSize: "13px", fontWeight: 600,
+                  cursor: "pointer", boxShadow: "0 0 16px rgba(99,102,241,0.25)",
+                }}>
+                  <Plus size={14} /> Add Node
                 </button>
               </div>
 
-              <div className="grid gap-4">
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "14px" }}>
                 {filteredNodes.map((node) => (
-                  <div key={node.uuid} className="bg-[#161b27] border border-[#1e2535] rounded-xl p-5 hover:border-indigo-500/30 transition">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-indigo-600/20 border border-indigo-500/20 flex items-center justify-center">
-                          <Globe className="w-5 h-5 text-indigo-400" />
+                  <div key={node.uuid} style={{
+                    background: "var(--bg-surface)", border: "1px solid var(--border)",
+                    borderRadius: "12px", padding: "20px",
+                    transition: "border 0.15s",
+                  }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderColor = "rgba(99,102,241,0.3)"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--border)"}
+                  >
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "16px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div style={{
+                          width: "36px", height: "36px", borderRadius: "9px",
+                          background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)",
+                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                        }}>
+                          <Globe size={16} color="var(--indigo)" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-white">{node.name}</p>
-                          <p className="text-xs text-slate-500">{node.location} · {node.fqdn}</p>
+                          <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "2px" }}>{node.name}</p>
+                          <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>{node.location} · {node.fqdn}</p>
                         </div>
                       </div>
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-full border capitalize ${
-                        node.status === "online"
-                          ? "bg-green-500/10 text-green-400 border-green-500/20"
-                          : node.status === "draining"
-                          ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
-                          : "bg-slate-500/10 text-slate-400 border-slate-500/20"
-                      }`}>
-                        {node.status}
-                      </span>
+                      <NodeStatus status={node.status} />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div className="bg-[#0f1117] rounded-lg p-3">
-                        <p className="text-xs text-slate-500 mb-1 flex items-center justify-center gap-1">
-                          <Cpu className="w-3 h-3" /> CPU
-                        </p>
-                        <p className="text-sm font-bold text-white">{node.cpuTotal} cores</p>
-                      </div>
-                      <div className="bg-[#0f1117] rounded-lg p-3">
-                        <p className="text-xs text-slate-500 mb-1 flex items-center justify-center gap-1">
-                          <Activity className="w-3 h-3" /> Memory
-                        </p>
-                        <p className="text-sm font-bold text-white">{node.memoryTotal} MB</p>
-                      </div>
-                      <div className="bg-[#0f1117] rounded-lg p-3">
-                        <p className="text-xs text-slate-500 mb-1 flex items-center justify-center gap-1">
-                          <HardDrive className="w-3 h-3" /> Disk
-                        </p>
-                        <p className="text-sm font-bold text-white">{node.diskTotal} MB</p>
-                      </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "8px" }}>
+                      {[
+                        { icon: Cpu,       label: "CPU",    value: `${node.cpuTotal} cores` },
+                        { icon: Activity,  label: "Memory", value: `${node.memoryTotal}MB`  },
+                        { icon: HardDrive, label: "Disk",   value: `${node.diskTotal}MB`    },
+                      ].map(({ icon: Icon, label, value }) => (
+                        <div key={label} style={{
+                          background: "var(--bg-elevated)", borderRadius: "8px",
+                          padding: "10px", textAlign: "center",
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "4px", marginBottom: "4px" }}>
+                            <Icon size={11} color="var(--text-muted)" />
+                            <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>{label}</span>
+                          </div>
+                          <p style={{ fontSize: "13px", fontWeight: 700, color: "var(--text-primary)" }}>{value}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -445,6 +479,8 @@ export default function AdminPanel() {
           )}
         </>
       )}
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
     </Layout>
   );
 }

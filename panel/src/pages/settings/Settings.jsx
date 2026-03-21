@@ -1,50 +1,37 @@
-// ============================================================
-//  Settings.jsx — User settings page
-// ============================================================
-
 import { useState }      from "react";
 import {
-  User, Mail, Lock, Save,
-  AlertCircle, CheckCircle, Loader2, Shield,
+  User, Mail, Lock, Save, Shield,
+  AlertCircle, CheckCircle, Loader2,
 } from "lucide-react";
-import Layout            from "../../components/layout/Layout";
-import api               from "../../lib/api";
-import { useAuthStore }  from "../../store/authStore";
+import Layout           from "../../components/layout/Layout";
+import api              from "../../lib/api";
+import { useAuthStore } from "../../store/authStore";
 
-// ── Section card ──────────────────────────────────────────────
-function Section({ title, description, children }) {
-  return (
-    <div className="bg-[#161b27] border border-[#1e2535] rounded-xl p-6">
-      <div className="mb-5 pb-4 border-b border-[#1e2535]">
-        <h3 className="text-sm font-semibold text-white">{title}</h3>
-        {description && (
-          <p className="text-xs text-slate-500 mt-0.5">{description}</p>
-        )}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-// ── Input field ───────────────────────────────────────────────
-function Field({ label, icon: Icon, type = "text", name, value, onChange, placeholder, disabled }) {
+// ── Reusable input ────────────────────────────────────────────
+function Input({ label, icon: Icon, type = "text", name, value, onChange, placeholder, disabled }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-300 mb-1.5">
+      <label style={{ display: "block", fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "6px" }}>
         {label}
       </label>
-      <div className="relative">
-        {Icon && (
-          <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-        )}
+      <div style={{ position: "relative" }}>
+        {Icon && <Icon size={13} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)", pointerEvents: "none" }} />}
         <input
-          type={type}
-          name={name}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
+          type={type} name={name} value={value}
+          onChange={onChange} placeholder={placeholder}
           disabled={disabled}
-          className={`w-full bg-[#0f1117] border border-[#1e2535] rounded-lg ${Icon ? "pl-10" : "pl-4"} pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition disabled:opacity-50 disabled:cursor-not-allowed`}
+          style={{
+            width: "100%", boxSizing: "border-box",
+            background: disabled ? "var(--bg-base)" : "var(--bg-elevated)",
+            border: "1px solid var(--border)", borderRadius: "8px",
+            padding: `10px 12px 10px ${Icon ? "34px" : "12px"}`,
+            fontSize: "13px", color: disabled ? "var(--text-muted)" : "var(--text-primary)",
+            outline: "none", transition: "border 0.15s",
+            cursor: disabled ? "not-allowed" : "text",
+            opacity: disabled ? 0.6 : 1,
+          }}
+          onFocus={(e)  => { if (!disabled) e.target.style.borderColor = "var(--indigo)"; }}
+          onBlur={(e)   => { e.target.style.borderColor = "var(--border)"; }}
         />
       </div>
     </div>
@@ -54,90 +41,118 @@ function Field({ label, icon: Icon, type = "text", name, value, onChange, placeh
 // ── Alert ─────────────────────────────────────────────────────
 function Alert({ type, message }) {
   if (!message) return null;
-  const styles = {
-    success: "bg-green-500/10 border-green-500/20 text-green-400",
-    error:   "bg-red-500/10   border-red-500/20   text-red-400",
-  };
+  const s = type === "success"
+    ? { bg: "rgba(34,197,94,0.08)",  border: "rgba(34,197,94,0.2)",  color: "#22c55e" }
+    : { bg: "rgba(239,68,68,0.08)",  border: "rgba(239,68,68,0.2)",  color: "#ef4444" };
   const Icon = type === "success" ? CheckCircle : AlertCircle;
   return (
-    <div className={`flex items-center gap-2 border rounded-lg px-4 py-3 text-sm ${styles[type]}`}>
-      <Icon className="w-4 h-4 shrink-0" />
-      {message}
+    <div style={{
+      display: "flex", alignItems: "center", gap: "8px",
+      background: s.bg, border: `1px solid ${s.border}`,
+      borderRadius: "8px", padding: "10px 14px",
+      color: s.color, fontSize: "13px",
+    }}>
+      <Icon size={14} />{message}
     </div>
   );
 }
 
-// ── Main component ────────────────────────────────────────────
+// ── Section card ──────────────────────────────────────────────
+function Card({ title, description, children }) {
+  return (
+    <div style={{
+      background: "var(--bg-surface)",
+      border: "1px solid var(--border)",
+      borderRadius: "12px", overflow: "hidden",
+    }}>
+      <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--border)" }}>
+        <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "2px" }}>{title}</p>
+        {description && <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>{description}</p>}
+      </div>
+      <div style={{ padding: "24px" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ── Save button ───────────────────────────────────────────────
+function SaveBtn({ loading, label = "Save changes", icon: Icon = Save }) {
+  return (
+    <button
+      type="submit" disabled={loading}
+      style={{
+        display: "flex", alignItems: "center", gap: "6px",
+        background: "var(--indigo)", border: "none",
+        borderRadius: "8px", padding: "9px 18px",
+        color: "white", fontSize: "13px", fontWeight: 600,
+        cursor: loading ? "not-allowed" : "pointer",
+        opacity: loading ? 0.7 : 1,
+        boxShadow: "0 0 16px rgba(99,102,241,0.25)",
+        transition: "opacity 0.15s",
+      }}
+    >
+      {loading
+        ? <><Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} /> Saving...</>
+        : <><Icon size={13} />{label}</>
+      }
+    </button>
+  );
+}
+
+// ── Info row ──────────────────────────────────────────────────
+function InfoRow({ label, value }) {
+  return (
+    <div style={{
+      display: "flex", justifyContent: "space-between", alignItems: "center",
+      padding: "10px 0", borderBottom: "1px solid var(--border)",
+    }}>
+      <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{label}</span>
+      <span style={{ fontSize: "12px", color: "var(--text-primary)", fontFamily: "monospace", maxWidth: "280px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────
 export default function Settings() {
   const { user, setUser } = useAuthStore();
 
-  // ── Profile form ───────────────────────────────────────────
   const [profile, setProfile] = useState({
-    username:  user?.username  || "",
-    email:     user?.email     || "",
     firstName: user?.firstName || "",
     lastName:  user?.lastName  || "",
   });
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileAlert,   setProfileAlert]   = useState(null);
 
-  // ── Password form ──────────────────────────────────────────
-  const [passwords, setPasswords] = useState({
-    current: "",
-    next:    "",
-    confirm: "",
-  });
+  const [passwords, setPasswords] = useState({ current: "", next: "", confirm: "" });
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordAlert,   setPasswordAlert]   = useState(null);
 
-  function handleProfileChange(e) {
-    setProfile((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    setProfileAlert(null);
-  }
-
-  function handlePasswordChange(e) {
-    setPasswords((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-    setPasswordAlert(null);
-  }
-
-  // ── Save profile ───────────────────────────────────────────
   async function saveProfile(e) {
     e.preventDefault();
     setProfileLoading(true);
     setProfileAlert(null);
-
     try {
-      const { data } = await api.patch("/users/me", {
-        firstName: profile.firstName || null,
-        lastName:  profile.lastName  || null,
-      });
+      const { data } = await api.patch("/users/me", profile);
       setUser(data.user);
       setProfileAlert({ type: "success", message: "Profile updated successfully" });
     } catch (err) {
-      setProfileAlert({
-        type:    "error",
-        message: err.response?.data?.message || "Failed to update profile",
-      });
+      setProfileAlert({ type: "error", message: err.response?.data?.message || "Failed to update" });
     } finally {
       setProfileLoading(false);
     }
   }
 
-  // ── Change password ────────────────────────────────────────
   async function changePassword(e) {
     e.preventDefault();
     setPasswordAlert(null);
-
-    if (passwords.next !== passwords.confirm) {
-      return setPasswordAlert({ type: "error", message: "New passwords do not match" });
-    }
-
-    if (passwords.next.length < 8) {
+    if (passwords.next !== passwords.confirm)
+      return setPasswordAlert({ type: "error", message: "Passwords do not match" });
+    if (passwords.next.length < 8)
       return setPasswordAlert({ type: "error", message: "Password must be at least 8 characters" });
-    }
-
     setPasswordLoading(true);
-
     try {
       await api.patch("/users/me/password", {
         currentPassword: passwords.current,
@@ -146,10 +161,7 @@ export default function Settings() {
       setPasswords({ current: "", next: "", confirm: "" });
       setPasswordAlert({ type: "success", message: "Password changed successfully" });
     } catch (err) {
-      setPasswordAlert({
-        type:    "error",
-        message: err.response?.data?.message || "Failed to change password",
-      });
+      setPasswordAlert({ type: "error", message: err.response?.data?.message || "Failed to change password" });
     } finally {
       setPasswordLoading(false);
     }
@@ -157,173 +169,85 @@ export default function Settings() {
 
   return (
     <Layout title="Settings">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-white">Settings</h2>
-        <p className="text-sm text-slate-400 mt-0.5">
-          Manage your account and preferences
-        </p>
+      <div style={{ marginBottom: "24px" }}>
+        <h2 style={{ fontSize: "20px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>Settings</h2>
+        <p style={{ fontSize: "13px", color: "var(--text-muted)" }}>Manage your account and preferences</p>
       </div>
 
-      <div className="max-w-2xl space-y-6">
+      <div style={{ maxWidth: "640px", display: "flex", flexDirection: "column", gap: "16px" }}>
 
         {/* Profile */}
-        <Section
-          title="Profile"
-          description="Update your personal information"
-        >
-          <form onSubmit={saveProfile} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <Field
-                label="First name"
-                icon={User}
-                name="firstName"
-                value={profile.firstName}
-                onChange={handleProfileChange}
-                placeholder="John"
-              />
-              <Field
-                label="Last name"
-                name="lastName"
-                value={profile.lastName}
-                onChange={handleProfileChange}
-                placeholder="Doe"
-              />
+        <Card title="Profile" description="Update your personal information">
+          <form onSubmit={saveProfile} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <Input label="First name" name="firstName" value={profile.firstName}
+                onChange={(e) => setProfile((p) => ({ ...p, firstName: e.target.value }))}
+                placeholder="John" />
+              <Input label="Last name" name="lastName" value={profile.lastName}
+                onChange={(e) => setProfile((p) => ({ ...p, lastName: e.target.value }))}
+                placeholder="Doe" />
             </div>
-
-            <Field
-              label="Username"
-              icon={User}
-              name="username"
-              value={profile.username}
-              onChange={handleProfileChange}
-              disabled
-            />
-
-            <Field
-              label="Email address"
-              icon={Mail}
-              type="email"
-              name="email"
-              value={profile.email}
-              onChange={handleProfileChange}
-              disabled
-            />
-
-            <p className="text-xs text-slate-600">
-              Username and email cannot be changed here — contact an admin.
+            <Input label="Username" icon={User} value={user?.username || ""} disabled />
+            <Input label="Email address" icon={Mail} type="email" value={user?.email || ""} disabled />
+            <p style={{ fontSize: "11px", color: "var(--text-muted)" }}>
+              Username and email can only be changed by an admin.
             </p>
-
-            {profileAlert && (
-              <Alert type={profileAlert.type} message={profileAlert.message} />
-            )}
-
-            <button
-              type="submit"
-              disabled={profileLoading}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition"
-            >
-              {profileLoading
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</>
-                : <><Save className="w-4 h-4" /> Save changes</>
-              }
-            </button>
+            {profileAlert && <Alert type={profileAlert.type} message={profileAlert.message} />}
+            <div><SaveBtn loading={profileLoading} /></div>
           </form>
-        </Section>
+        </Card>
 
         {/* Password */}
-        <Section
-          title="Change Password"
-          description="Use a strong password you don't use anywhere else"
-        >
-          <form onSubmit={changePassword} className="space-y-4">
-            <Field
-              label="Current password"
-              icon={Lock}
-              type="password"
-              name="current"
+        <Card title="Change Password" description="Use a strong password you don't use anywhere else">
+          <form onSubmit={changePassword} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <Input label="Current password" icon={Lock} type="password" name="current"
               value={passwords.current}
-              onChange={handlePasswordChange}
-              placeholder="••••••••"
-            />
-            <Field
-              label="New password"
-              icon={Lock}
-              type="password"
-              name="next"
+              onChange={(e) => setPasswords((p) => ({ ...p, current: e.target.value }))}
+              placeholder="••••••••" />
+            <Input label="New password" icon={Lock} type="password" name="next"
               value={passwords.next}
-              onChange={handlePasswordChange}
-              placeholder="••••••••"
-            />
-            <Field
-              label="Confirm new password"
-              icon={Lock}
-              type="password"
-              name="confirm"
+              onChange={(e) => setPasswords((p) => ({ ...p, next: e.target.value }))}
+              placeholder="••••••••" />
+            <Input label="Confirm new password" icon={Lock} type="password" name="confirm"
               value={passwords.confirm}
-              onChange={handlePasswordChange}
-              placeholder="••••••••"
-            />
-
-            {passwordAlert && (
-              <Alert type={passwordAlert.type} message={passwordAlert.message} />
-            )}
-
-            <button
-              type="submit"
-              disabled={passwordLoading}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-sm font-medium px-4 py-2.5 rounded-lg transition"
-            >
-              {passwordLoading
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> Changing...</>
-                : <><Lock className="w-4 h-4" /> Change password</>
-              }
-            </button>
+              onChange={(e) => setPasswords((p) => ({ ...p, confirm: e.target.value }))}
+              placeholder="••••••••" />
+            {passwordAlert && <Alert type={passwordAlert.type} message={passwordAlert.message} />}
+            <div><SaveBtn loading={passwordLoading} label="Change password" icon={Lock} /></div>
           </form>
-        </Section>
+        </Card>
 
         {/* Account info */}
-        <Section title="Account" description="Your account details">
-          <div className="space-y-3 text-sm">
-            {[
-              { label: "Account ID",  value: user?.uuid },
-              { label: "Role",        value: user?.role },
-              { label: "Member since", value: user?.createdAt
-                  ? new Date(user.createdAt).toLocaleDateString()
-                  : "—"
-              },
-              { label: "Last login",  value: user?.lastLoginAt
-                  ? new Date(user.lastLoginAt).toLocaleString()
-                  : "—"
-              },
-              { label: "Last login IP", value: user?.lastLoginIp || "—" },
-            ].map(({ label, value }) => (
-              <div key={label} className="flex items-center justify-between py-2 border-b border-[#1e2535] last:border-0">
-                <span className="text-slate-500">{label}</span>
-                <span className="text-slate-300 font-mono text-xs truncate max-w-64">
-                  {value}
-                </span>
-              </div>
-            ))}
+        <Card title="Account" description="Your account details">
+          <div>
+            <InfoRow label="Account ID"    value={user?.uuid} />
+            <InfoRow label="Role"          value={user?.role} />
+            <InfoRow label="Member since"  value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—"} />
+            <InfoRow label="Last login"    value={user?.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "—"} />
+            <InfoRow label="Last login IP" value={user?.lastLoginIp || "—"} />
           </div>
-        </Section>
+        </Card>
 
-        {/* 2FA — coming soon */}
-        <Section
-          title="Two-Factor Authentication"
-          description="Add an extra layer of security to your account"
-        >
-          <div className="flex items-center gap-3">
-            <Shield className="w-8 h-8 text-slate-600" />
+        {/* 2FA */}
+        <Card title="Two-Factor Authentication" description="Add an extra layer of security">
+          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+            <div style={{
+              width: "40px", height: "40px", borderRadius: "10px",
+              background: "var(--bg-elevated)", border: "1px solid var(--border)",
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+            }}>
+              <Shield size={18} color="var(--text-muted)" />
+            </div>
             <div>
-              <p className="text-sm text-slate-300">2FA is not enabled</p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Coming soon — TOTP authenticator support
-              </p>
+              <p style={{ fontSize: "13px", color: "var(--text-primary)", marginBottom: "2px" }}>2FA is not enabled</p>
+              <p style={{ fontSize: "12px", color: "var(--text-muted)" }}>Coming soon — TOTP authenticator app support</p>
             </div>
           </div>
-        </Section>
+        </Card>
 
       </div>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
     </Layout>
   );
 }

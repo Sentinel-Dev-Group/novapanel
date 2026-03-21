@@ -1,67 +1,43 @@
-// ============================================================
-//  Register.jsx — Register page
-// ============================================================
-
 import { useState }          from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Zap, Mail, Lock, User, AlertCircle, Loader2, CheckCircle } from "lucide-react";
+import {
+  Zap, Mail, Lock, User,
+  AlertCircle, Loader2, CheckCircle,
+} from "lucide-react";
 import api              from "../../lib/api";
 import { useAuthStore } from "../../store/authStore";
+
+function strength(p) {
+  let s = 0;
+  if (p.length >= 8)           s++;
+  if (/[A-Z]/.test(p))         s++;
+  if (/[0-9]/.test(p))         s++;
+  if (/[^A-Za-z0-9]/.test(p)) s++;
+  return s;
+}
 
 export default function Register() {
   const navigate  = useNavigate();
   const { login } = useAuthStore();
-
-  const [form, setForm] = useState({
-    username:  "",
-    email:     "",
-    password:  "",
-    confirm:   "",
-    firstName: "",
-    lastName:  "",
-  });
-
+  const [form, setForm] = useState({ username:"", email:"", password:"", confirm:"", firstName:"", lastName:"" });
   const [error,   setError]   = useState(null);
   const [loading, setLoading] = useState(false);
 
   function handleChange(e) {
-    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
     setError(null);
   }
 
-  // ── Password strength ───────────────────────────────────────
-  function getStrength(password) {
-    let score = 0;
-    if (password.length >= 8)                    score++;
-    if (/[A-Z]/.test(password))                  score++;
-    if (/[0-9]/.test(password))                  score++;
-    if (/[^A-Za-z0-9]/.test(password))           score++;
-    return score;
-  }
-
-  const strength      = getStrength(form.password);
-  const strengthLabel = ["", "Weak", "Fair", "Good", "Strong"][strength];
-  const strengthColor = ["", "red", "yellow", "blue", "green"][strength];
+  const s      = strength(form.password);
+  const sLabel = ["","Weak","Fair","Good","Strong"][s];
+  const sColor = ["","#ef4444","#eab308","#3b82f6","#22c55e"][s];
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setError(null);
-
-    // ── Client side validation ────────────────────────────
-    if (form.password !== form.confirm) {
-      return setError("Passwords do not match");
-    }
-
-    if (form.password.length < 8) {
-      return setError("Password must be at least 8 characters");
-    }
-
-    if (!/^[a-zA-Z0-9_-]+$/.test(form.username)) {
-      return setError("Username can only contain letters, numbers, _ and -");
-    }
-
+    if (form.password !== form.confirm) return setError("Passwords do not match");
+    if (form.password.length < 8)       return setError("Password must be at least 8 characters");
+    if (!/^[a-zA-Z0-9_-]+$/.test(form.username)) return setError("Username can only contain letters, numbers, _ and -");
     setLoading(true);
-
     try {
       const { data } = await api.post("/auth/register", {
         username:  form.username,
@@ -70,10 +46,8 @@ export default function Register() {
         firstName: form.firstName || undefined,
         lastName:  form.lastName  || undefined,
       });
-
       login(data.user, data.accessToken, data.refreshToken);
       navigate("/dashboard");
-
     } catch (err) {
       setError(err.response?.data?.message || "Something went wrong");
     } finally {
@@ -81,177 +55,153 @@ export default function Register() {
     }
   }
 
+  const inputStyle = {
+    width: "100%", background: "var(--bg-elevated)",
+    border: "1px solid var(--border)", borderRadius: "8px",
+    padding: "10px 12px", fontSize: "13px",
+    color: "var(--text-primary)", outline: "none",
+    boxSizing: "border-box", transition: "border 0.15s",
+  };
+
+  const iconInputStyle = { ...inputStyle, paddingLeft: "34px" };
+
   return (
-    <div className="min-h-screen bg-[#0f1117] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
+    <div style={{
+      minHeight: "100vh", background: "var(--bg-base)",
+      display: "flex", alignItems: "center",
+      justifyContent: "center", padding: "24px",
+    }}>
+      {/* Glow */}
+      <div style={{
+        position: "fixed", top: "20%", left: "50%",
+        transform: "translateX(-50%)",
+        width: "500px", height: "300px",
+        background: "radial-gradient(ellipse, rgba(99,102,241,0.08) 0%, transparent 70%)",
+        pointerEvents: "none",
+      }} />
+
+      <div style={{ width: "100%", maxWidth: "420px", position: "relative" }}>
 
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
-            <Zap className="w-6 h-6 text-white" />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", marginBottom: "32px" }}>
+          <div style={{
+            width: "40px", height: "40px",
+            background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+            borderRadius: "12px", display: "flex",
+            alignItems: "center", justifyContent: "center",
+            boxShadow: "0 0 24px rgba(99,102,241,0.4)",
+          }}>
+            <Zap size={20} color="white" />
           </div>
-          <span className="text-2xl font-bold text-white tracking-tight">
-            Nova<span className="text-indigo-400">Panel</span>
+          <span style={{ fontSize: "22px", fontWeight: 700, color: "var(--text-primary)", letterSpacing: "-0.3px" }}>
+            Nova<span style={{ color: "var(--indigo-light)" }}>Panel</span>
           </span>
         </div>
 
         {/* Card */}
-        <div className="bg-[#161b27] border border-[#1e2535] rounded-2xl p-8">
-          <h1 className="text-xl font-semibold text-white mb-1">
+        <div style={{
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border)",
+          borderRadius: "16px", padding: "32px",
+          boxShadow: "0 24px 48px rgba(0,0,0,0.3)",
+        }}>
+          <h1 style={{ fontSize: "18px", fontWeight: 700, color: "var(--text-primary)", marginBottom: "4px" }}>
             Create an account
           </h1>
-          <p className="text-sm text-slate-400 mb-6">
+          <p style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "24px" }}>
             Get started with NovaPanel today
           </p>
 
-          {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-lg px-4 py-3 mb-5">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              {error}
+            <div style={{
+              display: "flex", alignItems: "center", gap: "8px",
+              background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+              borderRadius: "8px", padding: "10px 14px",
+              color: "#ef4444", fontSize: "13px", marginBottom: "20px",
+            }}>
+              <AlertCircle size={14} />{error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
 
             {/* Name row */}
-            <div className="grid grid-cols-2 gap-3">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  First name
-                </label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={form.firstName}
-                  onChange={handleChange}
-                  placeholder="John"
-                  className="w-full bg-[#0f1117] border border-[#1e2535] rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
-                />
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "6px" }}>First name</label>
+                <input type="text" name="firstName" value={form.firstName} onChange={handleChange} placeholder="John" style={inputStyle}
+                  onFocus={(e) => e.target.style.borderColor = "var(--indigo)"}
+                  onBlur={(e)  => e.target.style.borderColor = "var(--border)"} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                  Last name
-                </label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={form.lastName}
-                  onChange={handleChange}
-                  placeholder="Doe"
-                  className="w-full bg-[#0f1117] border border-[#1e2535] rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
-                />
+                <label style={{ display: "block", fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "6px" }}>Last name</label>
+                <input type="text" name="lastName" value={form.lastName} onChange={handleChange} placeholder="Doe" style={inputStyle}
+                  onFocus={(e) => e.target.style.borderColor = "var(--indigo)"}
+                  onBlur={(e)  => e.target.style.borderColor = "var(--border)"} />
               </div>
             </div>
 
             {/* Username */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Username
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="text"
-                  name="username"
-                  value={form.username}
-                  onChange={handleChange}
-                  placeholder="johndoe"
-                  required
-                  className="w-full bg-[#0f1117] border border-[#1e2535] rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
-                />
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "6px" }}>Username</label>
+              <div style={{ position: "relative" }}>
+                <User size={13} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                <input type="text" name="username" value={form.username} onChange={handleChange} placeholder="johndoe" required style={iconInputStyle}
+                  onFocus={(e) => e.target.style.borderColor = "var(--indigo)"}
+                  onBlur={(e)  => e.target.style.borderColor = "var(--border)"} />
               </div>
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Email address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="john@example.com"
-                  required
-                  className="w-full bg-[#0f1117] border border-[#1e2535] rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
-                />
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "6px" }}>Email address</label>
+              <div style={{ position: "relative" }}>
+                <Mail size={13} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                <input type="email" name="email" value={form.email} onChange={handleChange} placeholder="john@example.com" required style={iconInputStyle}
+                  onFocus={(e) => e.target.style.borderColor = "var(--indigo)"}
+                  onBlur={(e)  => e.target.style.borderColor = "var(--border)"} />
               </div>
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="password"
-                  name="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  required
-                  className="w-full bg-[#0f1117] border border-[#1e2535] rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
-                />
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "6px" }}>Password</label>
+              <div style={{ position: "relative" }}>
+                <Lock size={13} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                <input type="password" name="password" value={form.password} onChange={handleChange} placeholder="••••••••" required style={iconInputStyle}
+                  onFocus={(e) => e.target.style.borderColor = "var(--indigo)"}
+                  onBlur={(e)  => e.target.style.borderColor = "var(--border)"} />
               </div>
-
-              {/* Password strength bar */}
+              {/* Strength bar */}
               {form.password && (
-                <div className="mt-2">
-                  <div className="flex gap-1 mb-1">
+                <div style={{ marginTop: "8px" }}>
+                  <div style={{ display: "flex", gap: "4px", marginBottom: "4px" }}>
                     {[1,2,3,4].map((i) => (
-                      <div
-                        key={i}
-                        className={`h-1 flex-1 rounded-full transition-all ${
-                          i <= strength
-                            ? strengthColor === "red"    ? "bg-red-500"
-                            : strengthColor === "yellow" ? "bg-yellow-500"
-                            : strengthColor === "blue"   ? "bg-blue-500"
-                            : "bg-green-500"
-                            : "bg-[#1e2535]"
-                        }`}
-                      />
+                      <div key={i} style={{
+                        height: "3px", flex: 1, borderRadius: "3px",
+                        background: i <= s ? sColor : "var(--bg-elevated)",
+                        transition: "background 0.2s",
+                      }} />
                     ))}
                   </div>
-                  <p className={`text-xs ${
-                    strengthColor === "red"    ? "text-red-400"
-                    : strengthColor === "yellow" ? "text-yellow-400"
-                    : strengthColor === "blue"   ? "text-blue-400"
-                    : "text-green-400"
-                  }`}>
-                    {strengthLabel} password
-                  </p>
+                  <p style={{ fontSize: "11px", color: sColor }}>{sLabel} password</p>
                 </div>
               )}
             </div>
 
-            {/* Confirm password */}
+            {/* Confirm */}
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                Confirm password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="password"
-                  name="confirm"
-                  value={form.confirm}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  required
-                  className="w-full bg-[#0f1117] border border-[#1e2535] rounded-lg pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
-                />
-                {/* Match indicator */}
+              <label style={{ display: "block", fontSize: "12px", fontWeight: 500, color: "var(--text-secondary)", marginBottom: "6px" }}>Confirm password</label>
+              <div style={{ position: "relative" }}>
+                <Lock size={13} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
+                <input type="password" name="confirm" value={form.confirm} onChange={handleChange} placeholder="••••••••" required style={iconInputStyle}
+                  onFocus={(e) => e.target.style.borderColor = "var(--indigo)"}
+                  onBlur={(e)  => e.target.style.borderColor = "var(--border)"} />
                 {form.confirm && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)" }}>
                     {form.password === form.confirm
-                      ? <CheckCircle className="w-4 h-4 text-green-400" />
-                      : <AlertCircle className="w-4 h-4 text-red-400" />
+                      ? <CheckCircle size={14} color="#22c55e" />
+                      : <AlertCircle size={14} color="#ef4444" />
                     }
                   </div>
                 )}
@@ -260,28 +210,35 @@ export default function Register() {
 
             {/* Submit */}
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm rounded-lg py-2.5 transition flex items-center justify-center gap-2 mt-2"
+              type="submit" disabled={loading}
+              style={{
+                width: "100%", padding: "11px",
+                background: "linear-gradient(135deg, #6366f1, #4f46e5)",
+                border: "none", borderRadius: "8px",
+                color: "white", fontSize: "13px", fontWeight: 600,
+                cursor: loading ? "not-allowed" : "pointer",
+                boxShadow: "0 0 20px rgba(99,102,241,0.3)",
+                display: "flex", alignItems: "center",
+                justifyContent: "center", gap: "6px",
+                opacity: loading ? 0.7 : 1,
+                marginTop: "4px",
+              }}
             >
               {loading
-                ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating account...</>
+                ? <><Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> Creating account...</>
                 : "Create account"
               }
             </button>
-
           </form>
         </div>
 
-        {/* Login link */}
-        <p className="text-center text-sm text-slate-500 mt-5">
+        <p style={{ textAlign: "center", fontSize: "13px", color: "var(--text-muted)", marginTop: "20px" }}>
           Already have an account?{" "}
-          <Link to="/login" className="text-indigo-400 hover:text-indigo-300 transition">
-            Sign in
-          </Link>
+          <Link to="/login" style={{ color: "var(--indigo-light)", textDecoration: "none" }}>Sign in</Link>
         </p>
-
       </div>
+
+      <style>{`@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }`}</style>
     </div>
   );
 }

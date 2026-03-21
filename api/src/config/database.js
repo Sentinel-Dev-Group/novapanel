@@ -53,7 +53,7 @@ async function connectDB() {
     // alter:true updates columns without dropping the table
     // NEVER use force:true in production — it drops everything
     if (app.isDev) {
-      await sequelize.sync({ alter: true });
+      await sequelize.sync({ alter: false });
       console.log("  ✅  Database models synced");
     }
   } catch (error) {

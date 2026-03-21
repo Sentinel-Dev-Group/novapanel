@@ -3,19 +3,14 @@ import Topbar  from "./Topbar";
 
 export default function Layout({ title, children }) {
   return (
-    <div className="min-h-screen bg-[#0f1117]">
-
-      {/* Sidebar — fixed on the left */}
+    <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg-base)" }}>
       <Sidebar />
-
-      {/* Everything else — pushed right by exact sidebar width */}
-      <div style={{ marginLeft: "224px" }} className="flex flex-col min-h-screen">
+      <div style={{ marginLeft: "220px", flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <Topbar title={title} />
-        <main className="flex-1 p-6">
+        <main style={{ flex: 1, padding: "24px", overflowY: "auto" }}>
           {children}
         </main>
       </div>
-
     </div>
   );
 }
