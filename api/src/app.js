@@ -101,6 +101,57 @@ app.use((err, req, res, next) => {
 io.on("connection", (socket) => {
   console.log(`  🔌  Socket connected: ${socket.id}`);
 
+  // ── Subscribe to a server's console ─────────────────────
+  //  Client sends: { serverId: "uuid" }
+  socket.on("console:subscribe", async ({ serverId }) => {
+    if (!serverId) return;
+
+    // Join a room named after the server UUID
+    socket.join(`server:${serverId}`);
+    console.log(`  📺  Socket ${socket.id} subscribed to server ${serverId}`);
+
+    // Send a welcome message to just this socket
+    socket.emit("console:line", {
+      serverId,
+      type: "info",
+      text: `Connected to console for server ${serverId}`,
+      time: new Date().toISOString(),
+    });
+  });
+
+  // ── Unsubscribe from a server's console ──────────────────
+  socket.on("console:unsubscribe", ({ serverId }) => {
+    socket.leave(`server:${serverId}`);
+    console.log(`  📺  Socket ${socket.id} unsubscribed from server ${serverId}`);
+  });
+
+  // ── Send a command to a server ───────────────────────────
+  //  In production the daemon would handle this
+  //  For now we echo it back as a console line
+  socket.on("console:command", ({ serverId, command }) => {
+    if (!serverId || !command) return;
+
+    console.log(`  ⌨️   Command for ${serverId}: ${command}`);
+
+    // Echo the command back to all subscribers
+    io.to(`server:${serverId}`).emit("console:line", {
+      serverId,
+      type: "command",
+      text: `> ${command}`,
+      time: new Date().toISOString(),
+    });
+
+    // Simulate a response — daemon will replace this
+    setTimeout(() => {
+      io.to(`server:${serverId}`).emit("console:line", {
+        serverId,
+        type: "info",
+        text: `[Server] Command received: ${command}`,
+        time: new Date().toISOString(),
+      });
+    }, 200);
+  });
+
   socket.on("disconnect", () => {
     console.log(`  🔌  Socket disconnected: ${socket.id}`);
   });
